@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  postgres-control:
+    image: postgres:15-alpine
+    container_name: zynkara-postgres-control
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ZynkaraShift}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-250730}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_control_data:/var/lib/postgresql/data
+    networks:
+      - zynkara-traefik-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres} -d $${POSTGRES_DB:-ZynkaraShift}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  control-plane-api:
+    image: node:18-alpine
+    container_name: zynkara-control-plane-api
+    working_dir: /app
+    command: >
+      sh -c "npm install && npm start"
+    volumes:
+      - ./backend:/app
+      - ./frontend:/frontend
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Map temporary volume base so orchestration engine can map user db volumes
+      - zynkara_dynamic_volumes:/var/zynkara/volumes
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-250730}@postgres-control:5432/${POSTGRES_DB:-ZynkaraShift}
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - TRAEFIK_NETWORK=zynkara-traefik-net
+      # Local path mapping on host for user volumes, can be configured
+      - VOLUMES_BASE_PATH=/var/zynkara/volumes
+      - PLATFORM_DOMAIN=${PLATFORM_DOMAIN:-zynkarashift.duckdns.org}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres-control:
+        condition: service_healthy
+    networks:
+      - zynkara-traefik-net
+    labels:
+      - "traefik.enable=true"
+      # Route zynkara.localhost or wildcard/main domain to this API (serving dashboard)
+      - "traefik.http.routers.control-plane.rule=Host(`zynkara.localhost`) || Host(`${PLATFORM_DOMAIN:-zynkarashift.duckdns.org}`) || Host(`zynkara.${PLATFORM_DOMAIN:-zynkarashift.duckdns.org}`)"
+      - "traefik.http.routers.control-plane.entrypoints=web"
+      - "traefik.http.services.control-plane.loadbalancer.server.port=8000"
+
+  traefik:
+    image: traefik:v2.11
+    container_name: zynkara-traefik
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "80:80"         # Public HTTP traffic maps to 80
+      - "8080:8080"   # Traefik dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - zynkara-traefik-net
+
+networks:
+  zynkara-traefik-net:
+    name: zynkara-traefik-net
+    driver: bridge
+
+volumes:
+  postgres_control_data:
+  zynkara_dynamic_volumes:

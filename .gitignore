@@ -1,0 +1,26 @@
+# Environment variables (Sensitive secrets)
+.env
+*.env
+backend/.env
+frontend/.env
+
+# Dependencies
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+
+# Production builds and temporary folders
+dist/
+build-temp/
+backend/build-temp/
+frontend/dist/
+
+# OS/IDE files
+.DS_Store
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp

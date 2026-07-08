@@ -1,0 +1,25 @@
+{
+  "name": "sovereign-control-plane",
+  "version": "1.0.0",
+  "description": "Control plane API for self-hosted multi-tenant PaaS in Node.js",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "seed": "node seed.js"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.10",
+    "axios": "^1.6.2",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dockerode": "^4.0.2",
+    "dotenv": "^17.4.2",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^6.9.7",
+    "pg": "^8.11.3",
+    "stripe": "^22.3.0",
+    "tar-fs": "^3.0.4"
+  }
+}
