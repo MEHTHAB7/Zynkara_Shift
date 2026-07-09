@@ -5,9 +5,9 @@ services:
     image: postgres:15-alpine
     container_name: zynkara-postgres-control
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-ZynkaraShift}
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-250730}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
@@ -15,7 +15,7 @@ services:
     networks:
       - zynkara-traefik-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres} -d $${POSTGRES_DB:-ZynkaraShift}"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -33,7 +33,7 @@ services:
       # Map temporary volume base so orchestration engine can map user db volumes
       - zynkara_dynamic_volumes:/var/zynkara/volumes
     environment:
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-250730}@postgres-control:5432/${POSTGRES_DB:-ZynkaraShift}
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-control:5432/${POSTGRES_DB}
       - DOCKER_HOST=unix:///var/run/docker.sock
       - TRAEFIK_NETWORK=zynkara-traefik-net
       # Local path mapping on host for user volumes, can be configured
