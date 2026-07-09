@@ -109,8 +109,8 @@ The platform control plane utilizes a PostgreSQL database to manage state:
 
 ### Demo Credentials (Seeded)
 During container initialization, the control plane automatically seeds two accounts to make testing easy:
-* **Standard Free Account:** `free@zynkarashift.local` (Password: `password123`)
-* **Premium Unlimited Account:** `premium@zynkarashift.local` (Password: `password123`)
+* **Standard Free Account:** `free@sovereign.local` (Password: `password123`)
+* **Premium Unlimited Account:** `premium@sovereign.local` (Password: `password123`)
 
 ---
 
