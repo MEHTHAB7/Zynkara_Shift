@@ -18,67 +18,67 @@ const ZynkaraLogo = ({ className = "brand-symbol" }) => (
         <stop offset="100%" stopColor="#facc15" />
       </linearGradient>
     </defs>
-    
+
     {/* Outer Broken Circle Segments */}
     {/* Left and bottom blue/cyan arc */}
-    <path 
-      d="M 44 50 A 22 22 0 1 1 50 20" 
-      stroke="url(#zynkara-glow)" 
-      strokeWidth="3.5" 
-      strokeLinecap="round" 
-      fill="none" 
+    <path
+      d="M 44 50 A 22 22 0 1 1 50 20"
+      stroke="url(#zynkara-glow)"
+      strokeWidth="3.5"
+      strokeLinecap="round"
+      fill="none"
     />
     {/* Top right orange/yellow arc */}
-    <path 
-      d="M 52 26 A 22 22 0 0 0 40 11" 
-      stroke="url(#zynkara-orange)" 
-      strokeWidth="3.5" 
-      strokeLinecap="round" 
-      fill="none" 
+    <path
+      d="M 52 26 A 22 22 0 0 0 40 11"
+      stroke="url(#zynkara-orange)"
+      strokeWidth="3.5"
+      strokeLinecap="round"
+      fill="none"
     />
 
     {/* Circuit details inside */}
     <path d="M 46 36 L 46 45 M 46 45 L 42 49" stroke="url(#zynkara-glow)" strokeWidth="1" strokeLinecap="round" fill="none" opacity="0.6" />
     <circle cx="46" cy="36" r="1.2" fill="#10b981" opacity="0.8" />
     <circle cx="42" cy="49" r="1.2" fill="#10b981" opacity="0.8" />
-    
+
     <path d="M 22 28 L 22 36" stroke="url(#zynkara-orange)" strokeWidth="1" strokeLinecap="round" fill="none" opacity="0.6" />
     <circle cx="22" cy="28" r="1.2" fill="#ea580c" opacity="0.8" />
 
     {/* Stylized Z - Glow Layer */}
-    <path 
-      d="M 22 22 L 42 22 L 22 42 L 36 42" 
-      stroke="url(#zynkara-glow)" 
-      strokeWidth="6" 
-      strokeLinecap="round" 
-      strokeLinejoin="round" 
-      fill="none" 
+    <path
+      d="M 22 22 L 42 22 L 22 42 L 36 42"
+      stroke="url(#zynkara-glow)"
+      strokeWidth="6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      fill="none"
       opacity="0.8"
     />
     {/* Stylized Z - Core Layer */}
-    <path 
-      d="M 22 22 L 42 22 L 22 42 L 36 42" 
-      stroke="url(#zynkara-light)" 
-      strokeWidth="3.5" 
-      strokeLinecap="round" 
-      strokeLinejoin="round" 
-      fill="none" 
+    <path
+      d="M 22 22 L 42 22 L 22 42 L 36 42"
+      stroke="url(#zynkara-light)"
+      strokeWidth="3.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      fill="none"
     />
 
     {/* Diagonal Orange Arrow */}
-    <path 
-      d="M 26 40 L 45 21" 
-      stroke="url(#zynkara-orange)" 
-      strokeWidth="4.5" 
-      strokeLinecap="round" 
-      fill="none" 
+    <path
+      d="M 26 40 L 45 21"
+      stroke="url(#zynkara-orange)"
+      strokeWidth="4.5"
+      strokeLinecap="round"
+      fill="none"
     />
-    <path 
-      d="M 38 18 L 49 17 L 48 28 Z" 
-      fill="url(#zynkara-orange)" 
-      stroke="url(#zynkara-orange)" 
-      strokeWidth="0.5" 
-      strokeLinejoin="round" 
+    <path
+      d="M 38 18 L 49 17 L 48 28 Z"
+      fill="url(#zynkara-orange)"
+      stroke="url(#zynkara-orange)"
+      strokeWidth="0.5"
+      strokeLinejoin="round"
     />
   </svg>
 );
@@ -309,7 +309,7 @@ export default function App() {
     const oauthToken = params.get('oauth_token');
     const oauthError = params.get('oauth_error');
     const upgradeSuccess = params.get('upgrade_success');
-    
+
     if (oauthToken) {
       localStorage.setItem('zynkara_token', oauthToken);
       setToken(oauthToken);
@@ -331,7 +331,7 @@ export default function App() {
   // Handle periodic status check polling
   useEffect(() => {
     if (!token || !currentUser) return;
-    
+
     // Poll projects list every 5 seconds silently
     const interval = setInterval(() => {
       fetchProjectsSilently();
@@ -570,18 +570,18 @@ export default function App() {
     }
 
     const endpoint = authMode === 'login' ? '/api/auth/login' : '/api/auth/register';
-    
+
     try {
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: authEmail, password: authPassword })
       });
-      
+
       let data = {};
       try {
         data = await response.json();
-      } catch (err) {}
+      } catch (err) { }
 
       if (!response.ok) {
         if (authMode === 'login' && response.status === 403 && data.unverified) {
@@ -615,7 +615,7 @@ export default function App() {
   const handleVerifySubmit = async (e) => {
     e.preventDefault();
     setAuthError('');
-    
+
     try {
       const response = await fetch('/api/auth/verify', {
         method: 'POST',
@@ -623,11 +623,11 @@ export default function App() {
         body: JSON.stringify({ email: verificationEmail, code: verificationCode })
       });
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.detail || 'Verification failed');
       }
-      
+
       localStorage.setItem('zynkara_token', data.access_token);
       setToken(data.access_token);
       showToast('Email verified and login successful!', 'success');
@@ -687,7 +687,7 @@ export default function App() {
         const data = await response.json();
         setProjects(data);
       }
-    } catch (e) {}
+    } catch (e) { }
   };
 
   const handleStopProject = async (id) => {
@@ -769,7 +769,7 @@ export default function App() {
         setBuildLogs(data.build_logs || 'No build logs available.');
         setRuntimeLogs(data.runtime_logs || 'No runtime output logs found (container may be stopped).');
       }
-    } catch (e) {}
+    } catch (e) { }
   };
 
   // Chat copilot pipeline
@@ -796,7 +796,7 @@ export default function App() {
       if (!response.ok) throw new Error(data.detail || 'Chat service error');
 
       setChatMessages(prev => prev.map(m => m.id === botMsgId ? { ...m, text: data.reply } : m));
-      
+
       if (data.action_payload && data.action_payload.action === 'deploy') {
         setPendingActionPayload(data.action_payload);
       } else {
@@ -909,7 +909,7 @@ export default function App() {
 
       showToast(`Project '${data.name}' deployment queued successfully!`, 'success');
       fetchProjects();
-      
+
       // Reset form & close modal
       setShowDeployModal(false);
       setDeployName('');
@@ -946,7 +946,7 @@ export default function App() {
 
       const data = await response.json();
       setPaymentStatus('Session created! Redirecting to Stripe...');
-      
+
       // Redirect browser to Stripe Checkout page
       window.location.href = data.url;
     } catch (err) {
@@ -1019,7 +1019,7 @@ export default function App() {
               <h2>ZynkaraShift</h2>
               <p>Self-Hosted, Zero-Cost Cloud PaaS</p>
             </div>
-            
+
             {!authVerificationRequired && (
               <div className="auth-tabs">
                 <button className={`tab-btn ${authMode === 'login' ? 'active' : ''}`} onClick={() => setAuthMode('login')}>Sign In</button>
@@ -1031,7 +1031,7 @@ export default function App() {
               <form onSubmit={handleVerifySubmit}>
                 <div style={{ marginBottom: '20px', textAlign: 'center' }}>
                   <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.5' }}>
-                    We've sent a 6-digit verification code to <br/>
+                    We've sent a 6-digit verification code to <br />
                     <strong style={{ color: '#fff' }}>{verificationEmail}</strong>.
                   </p>
                   <p style={{ fontSize: '12px', color: 'var(--warning)', marginTop: '6px', lineHeight: '1.4' }}>
@@ -1040,10 +1040,10 @@ export default function App() {
                 </div>
                 <div className="input-group">
                   <label htmlFor="auth-code"><i className="fa-solid fa-key"></i> Verification Code</label>
-                  <input 
-                    type="text" 
-                    id="auth-code" 
-                    required 
+                  <input
+                    type="text"
+                    id="auth-code"
+                    required
                     maxLength="6"
                     placeholder="123456"
                     value={verificationCode}
@@ -1066,10 +1066,10 @@ export default function App() {
                 <form onSubmit={handleAuthSubmit}>
                   <div className="input-group">
                     <label htmlFor="auth-email"><i className="fa-solid fa-envelope"></i> Email Address</label>
-                    <input 
-                      type="email" 
-                      id="auth-email" 
-                      required 
+                    <input
+                      type="email"
+                      id="auth-email"
+                      required
                       placeholder="name@domain.com"
                       value={authEmail}
                       onChange={(e) => setAuthEmail(e.target.value)}
@@ -1077,10 +1077,10 @@ export default function App() {
                   </div>
                   <div className="input-group">
                     <label htmlFor="auth-password"><i className="fa-solid fa-lock"></i> Password</label>
-                    <input 
-                      type="password" 
-                      id="auth-password" 
-                      required 
+                    <input
+                      type="password"
+                      id="auth-password"
+                      required
                       placeholder="••••••••"
                       value={authPassword}
                       onChange={(e) => setAuthPassword(e.target.value)}
@@ -1152,14 +1152,14 @@ export default function App() {
                 </div>
                 <span className="status-indicator online">Online</span>
               </div>
-              
+
               <div className="chat-history">
                 {chatMessages.map(msg => (
                   <div key={msg.id} className={`chat-msg chat-msg-${msg.sender}`}>
                     <p dangerouslySetInnerHTML={formatMsgText(msg.text)}></p>
                   </div>
                 ))}
-                
+
                 {/* Deployment approval panel */}
                 {pendingActionPayload && (
                   <div className="action-preview glass">
@@ -1207,13 +1207,13 @@ export default function App() {
                           )}
                         </tbody>
                       </table>
-                      
+
                       {pendingActionPayload.github_repo && (
                         <div style={{ marginTop: '8px', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '8px' }}>
                           <label style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 500, display: 'block', marginBottom: '2px' }}>GitHub Token (optional, for private repos):</label>
-                          <input 
-                            type="password" 
-                            placeholder="Enter personal access token..." 
+                          <input
+                            type="password"
+                            placeholder="Enter personal access token..."
                             className="preview-input"
                             value={githubTokenInput}
                             onChange={(e) => setGithubTokenInput(e.target.value)}
@@ -1241,13 +1241,13 @@ export default function App() {
 
               <div className="chat-input-wrapper">
                 <form onSubmit={sendChatMessage} className="chat-input-row">
-                  <input 
-                    type="text" 
-                    placeholder="Ask to deploy an app (e.g. 'deploy nginx:alpine on port 80')..." 
+                  <input
+                    type="text"
+                    placeholder="Ask to deploy an app (e.g. 'deploy nginx:alpine on port 80')..."
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
-                    autoComplete="off" 
-                    required 
+                    autoComplete="off"
+                    required
                   />
                   <button type="submit" className="btn btn-primary btn-icon" title="Send Message" aria-label="Send Message">
                     <i className="fa-solid fa-paper-plane" aria-hidden="true"></i>
@@ -1344,7 +1344,7 @@ export default function App() {
                     const domain = isLocalhost ? `${p.subdomain}.localhost` : `${p.subdomain}.${platformDomain}`;
                     const port = window.location.port ? `:${window.location.port}` : '';
                     const publicUrl = `http://${domain}${port}`;
-                    
+
                     return (
                       <div key={p.id} className="project-card glass" data-project-id={p.id}>
                         <div className="project-card-header">
@@ -1356,7 +1356,7 @@ export default function App() {
                           </div>
                           <span className={`status-badge status-${p.status}`}>{p.status}</span>
                         </div>
-                        
+
                         <div className="project-details">
                           {p.github_repo && (
                             <div className="detail-row">
@@ -1381,7 +1381,7 @@ export default function App() {
                             <span className="detail-value">{new Date(p.created_at).toLocaleDateString()}</span>
                           </div>
                         </div>
-                        
+
                         <div className="project-actions">
                           {p.status === 'active' ? (
                             <button className="btn btn-secondary btn-sm" onClick={() => handleStopProject(p.id)} title="Stop Service">
@@ -1396,11 +1396,11 @@ export default function App() {
                               <i className="fa-solid fa-spinner fa-spin"></i> Building
                             </button>
                           )}
-                          
+
                           <button className="btn btn-secondary btn-sm" onClick={() => setActiveLogsProjectId(p.id)}>
                             <i className="fa-solid fa-terminal"></i> Logs
                           </button>
-                          
+
                           <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDeleteProject(p.id)} title="Delete Project">
                             <i className="fa-solid fa-trash"></i>
                           </button>
@@ -1440,9 +1440,9 @@ export default function App() {
             <form onSubmit={handleManualDeploySubmit}>
               <div className="input-group">
                 <label><i className="fa-solid fa-tag"></i> Project Name</label>
-                <input 
-                  type="text" 
-                  required 
+                <input
+                  type="text"
+                  required
                   placeholder="my-cool-service"
                   value={deployName}
                   onChange={(e) => setDeployName(e.target.value)}
@@ -1511,8 +1511,8 @@ export default function App() {
                               <i className="fa-solid fa-spinner fa-spin"></i> Loading...
                             </div>
                           ) : gitBranches.length === 0 ? (
-                            <input 
-                              type="text" 
+                            <input
+                              type="text"
                               placeholder="main"
                               value={deployBranch}
                               onChange={(e) => setDeployBranch(e.target.value)}
@@ -1545,8 +1545,8 @@ export default function App() {
                         </div>
                         <div className="input-group" style={{ flex: 1 }}>
                           <label><i className="fa-solid fa-key"></i> GitHub Token</label>
-                          <input 
-                            type="password" 
+                          <input
+                            type="password"
                             placeholder="Using connected account token"
                             disabled
                             value=""
@@ -1578,9 +1578,9 @@ export default function App() {
                             </button>
                           )}
                         </label>
-                        <input 
-                          type="text" 
-                          required 
+                        <input
+                          type="text"
+                          required
                           placeholder="owner/repo (e.g. facebook/react)"
                           value={deployRepo}
                           onChange={(e) => setDeployRepo(e.target.value)}
@@ -1589,8 +1589,8 @@ export default function App() {
                       <div className="row" style={{ display: 'flex', gap: '10px' }}>
                         <div className="input-group" style={{ flex: 1 }}>
                           <label><i className="fa-solid fa-code-branch"></i> Branch</label>
-                          <input 
-                            type="text" 
+                          <input
+                            type="text"
                             placeholder="main"
                             value={deployBranch}
                             onChange={(e) => setDeployBranch(e.target.value)}
@@ -1598,8 +1598,8 @@ export default function App() {
                         </div>
                         <div className="input-group" style={{ flex: 1 }}>
                           <label><i className="fa-solid fa-key"></i> GitHub Token (optional)</label>
-                          <input 
-                            type="password" 
+                          <input
+                            type="password"
                             placeholder="For private repos"
                             value={deployGithubToken}
                             onChange={(e) => setDeployGithubToken(e.target.value)}
@@ -1612,9 +1612,9 @@ export default function App() {
               ) : (
                 <div className="input-group">
                   <label><i className="fa-solid fa-cube"></i> Docker Image Name</label>
-                  <input 
-                    type="text" 
-                    required 
+                  <input
+                    type="text"
+                    required
                     placeholder="nginx:alpine or python:3.9-slim"
                     value={deployImage}
                     onChange={(e) => setDeployImage(e.target.value)}
@@ -1625,17 +1625,17 @@ export default function App() {
               <div className="row" style={{ display: 'flex', gap: '10px' }}>
                 <div className="input-group" style={{ flex: 1 }}>
                   <label><i className="fa-solid fa-circle-right"></i> Internal App Port</label>
-                  <input 
-                    type="number" 
-                    required 
+                  <input
+                    type="number"
+                    required
                     value={deployPort}
                     onChange={(e) => setDeployPort(e.target.value)}
                   />
                 </div>
                 <div className="input-group" style={{ flex: 1 }}>
                   <label><i className="fa-solid fa-database"></i> Database Service</label>
-                  <select 
-                    value={deployDbType} 
+                  <select
+                    value={deployDbType}
                     onChange={(e) => setDeployDbType(e.target.value)}
                     style={{
                       background: 'rgba(0,0,0,0.2)',
@@ -1670,9 +1670,9 @@ export default function App() {
 
                 {deployEnvVars.map((item, idx) => (
                   <div key={idx} style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
-                    <input 
-                      type="text" 
-                      placeholder="KEY (e.g. API_KEY)" 
+                    <input
+                      type="text"
+                      placeholder="KEY (e.g. API_KEY)"
                       value={item.key}
                       onChange={(e) => handleEnvVarChange(idx, 'key', e.target.value)}
                       style={{
@@ -1686,9 +1686,9 @@ export default function App() {
                         outline: 'none'
                       }}
                     />
-                    <input 
-                      type="text" 
-                      placeholder="value" 
+                    <input
+                      type="text"
+                      placeholder="value"
                       value={item.value}
                       onChange={(e) => handleEnvVarChange(idx, 'value', e.target.value)}
                       style={{
@@ -1702,10 +1702,10 @@ export default function App() {
                         outline: 'none'
                       }}
                     />
-                    <button 
-                      className="btn btn-danger btn-xs btn-icon" 
-                      type="button" 
-                      onClick={() => handleRemoveEnvVar(idx)} 
+                    <button
+                      className="btn btn-danger btn-xs btn-icon"
+                      type="button"
+                      onClick={() => handleRemoveEnvVar(idx)}
                       style={{ height: '34px', width: '34px' }}
                       title="Remove Variable"
                     >
@@ -1737,7 +1737,7 @@ export default function App() {
               <h2>Unlock Unlimited Deployments</h2>
               <p>Reach beyond the 3-free-project local subscription cap</p>
             </div>
-            
+
             <div className="premium-features">
               <div className="feature-item">
                 <i className="fa-solid fa-check feature-check"></i>
@@ -1798,10 +1798,10 @@ export default function App() {
             <form onSubmit={handleConnectPat}>
               <div className="input-group" style={{ marginBottom: '15px' }}>
                 <label htmlFor="github-pat"><i className="fa-solid fa-key"></i> Personal Access Token</label>
-                <input 
-                  type="password" 
+                <input
+                  type="password"
                   id="github-pat"
-                  required 
+                  required
                   placeholder="ghp_..."
                   value={patInput}
                   onChange={(e) => setPatInput(e.target.value)}

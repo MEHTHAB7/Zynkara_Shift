@@ -56,6 +56,8 @@ jobs:
       # Step 5: Compile and build the static production bundle
       - name: Build static website
         run: npm run build
+        env:
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL || secrets.VITE_API_BASE_URL }}
 
       # Step 6: Configure GitHub Pages metadata (supports base URLs and custom domains)
       - name: Setup Pages configuration
