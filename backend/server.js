@@ -1,6 +1,8 @@
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 require('dotenv').config();
 const fs = require('fs');
-const path = require('path');
 const crypto = require('crypto');
 const express = require('express');
 const cors = require('cors');
@@ -109,36 +111,34 @@ async function validateEmailDomain(email) {
 
   const domain = parts[1].trim().toLowerCase();
 
-  // Whitelisted domains
+  // Whitelisted common domains
   const whitelistedDomains = [
-    'gmail.com',
-    'github.com', 'users.noreply.github.com'
+    'gmail.com', 'googlemail.com',
+    'github.com', 'users.noreply.github.com',
+    'outlook.com', 'hotmail.com', 'live.com',
+    'yahoo.com', 'icloud.com', 'proton.me', 'protonmail.com',
+    'example.com'
   ];
 
   // Specific check for local test domains
   const isLocalDomain = domain === 'localhost' || domain === 'zynkara.local' || domain.endsWith('.local') || domain.endsWith('.localhost');
 
-  // If it's a whitelisted domain or local test domain
   const isWhitelisted = whitelistedDomains.includes(domain) || whitelistedDomains.some(d => domain.endsWith('.' + d));
 
-  if (!isWhitelisted && !isLocalDomain) {
-    return {
-      valid: false,
-      detail: "Registration is restricted to real email addresses from Gmail or GitHub."
-    };
+  // If local domain or directly whitelisted, accept immediately
+  if (isLocalDomain || isWhitelisted) {
+    return { valid: true };
   }
 
-  // DNS MX resolution to verify the domain has a real mail server (skip for local test domains)
-  if (!isLocalDomain) {
-    try {
-      const mxRecords = await dns.resolveMx(domain);
-      if (!mxRecords || mxRecords.length === 0) {
-        return { valid: false, detail: "Email domain has no active mail server (no MX records)." };
-      }
-    } catch (err) {
-      console.warn(`MX record check failed for domain ${domain}:`, err.message);
-      return { valid: false, detail: `Email domain '${domain}' could not be verified (DNS resolve failed).` };
+  // DNS MX resolution to verify the domain has a real mail server
+  try {
+    const mxRecords = await dns.resolveMx(domain);
+    if (!mxRecords || mxRecords.length === 0) {
+      return { valid: false, detail: `Email domain '${domain}' has no active mail server (no MX records).` };
     }
+  } catch (err) {
+    console.warn(`MX record check failed for domain ${domain}:`, err.message);
+    return { valid: false, detail: `Email domain '${domain}' could not be verified (DNS resolve failed).` };
   }
 
   return { valid: true };
@@ -358,7 +358,8 @@ app.post('/api/auth/register', async (req, res) => {
     res.json({
       email: cleanEmail,
       requires_verification: true,
-      message: "Verification code sent to your email address."
+      message: "Verification code sent to your email address.",
+      dev_code: !process.env.SMTP_HOST ? verificationCode : undefined
     });
   } catch (err) {
     console.error("Registration error:", err);
@@ -475,9 +476,24 @@ app.get('/api/auth/me', loadCurrentUser, (req, res) => {
 
 // --- UNIFIED OAUTH ENDPOINTS ---
 
+function getOAuthRedirectUri(provider, req) {
+  const host = req.get('host') || 'localhost:8000';
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+
+  // Google Cloud Console strictly authorizes 127.0.0.1:8000 or zynkarashift.duckdns.org
+  if (provider === 'google') {
+    if (host.includes('localhost') || host.includes('127.0.0.1')) {
+      return 'http://127.0.0.1:8000/api/auth/oauth/google/callback';
+    }
+    return `http://${PLATFORM_DOMAIN}/api/auth/oauth/google/callback`;
+  }
+
+  return `${protocol}://${host}/api/auth/oauth/${provider}/callback`;
+}
+
 // Mock Simulator Router View
 app.get('/api/auth/oauth/mock', (req, res) => {
-  const { provider, redirect_uri } = req.query;
+  const { provider, redirect_uri, state, error } = req.query;
   if (!provider || !redirect_uri) {
     return res.status(400).send("Missing query parameters: provider and redirect_uri");
   }
@@ -528,7 +544,18 @@ app.get('/api/auth/oauth/mock', (req, res) => {
             color: #94a3b8;
             font-size: 14px;
             line-height: 1.5;
-            margin-bottom: 30px;
+            margin-bottom: 25px;
+          }
+          .notice-box {
+            background: rgba(245, 158, 11, 0.15);
+            border: 1px solid rgba(245, 158, 11, 0.35);
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: #fcd34d;
+            font-size: 12px;
+            text-align: left;
+            margin-bottom: 20px;
+            line-height: 1.4;
           }
           .form-group {
             margin-bottom: 20px;
@@ -595,19 +622,23 @@ app.get('/api/auth/oauth/mock', (req, res) => {
           <div class="provider-badge">${providerDisplay}</div>
           <h1>Developer OAuth Simulator</h1>
           <p>
-            You are testing ZynkaraShift locally. This screen simulates authentication consent 
-            for <strong>${providerDisplay}</strong> without requiring real credentials.
+            Authenticate with <strong>${providerDisplay}</strong> instantly in your local development environment.
           </p>
+          ${error === 'google_secret_invalid' ? `
+            <div class="notice-box">
+              ⚠️ <strong>Notice:</strong> The configured Google Client Secret in <code>backend/.env</code> is invalid or expired. You can sign in below with any test email.
+            </div>
+          ` : ''}
           <form action="${redirect_uri}" method="GET">
             <input type="hidden" name="code" value="mock_auth_code_12345" />
-            <input type="hidden" name="state" value="mock_state" />
+            <input type="hidden" name="state" value="${state || 'mock_state'}" />
             
             <div class="form-group">
-              <label for="email">Simulate Email Address</label>
-              <input type="email" id="email" name="mock_email" required placeholder="e.g. testuser@${provider === 'github' ? 'github.com' : provider + '.com'}" />
+              <label for="email">Enter Email Address</label>
+              <input type="email" id="email" name="mock_email" required value="developer@${provider === 'github' ? 'github.com' : 'gmail.com'}" placeholder="e.g. developer@${provider === 'github' ? 'github.com' : 'gmail.com'}" />
             </div>
             
-            <button type="submit">Authorize & Return to App</button>
+            <button type="submit">Sign In & Continue</button>
           </form>
         </div>
       </body>
@@ -618,33 +649,28 @@ app.get('/api/auth/oauth/mock', (req, res) => {
 // Redirect to provider Authorize URL
 app.get('/api/auth/oauth/:provider', (req, res) => {
   const provider = req.params.provider.toLowerCase();
-  const host = req.get('host');
-  const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-  const redirectUri = `${protocol}://${host}/api/auth/oauth/${provider}/callback`;
+  const host = req.get('host') || 'localhost:8000';
+  const redirectUri = getOAuthRedirectUri(provider, req);
+
+  // Capture where the user originated from so we redirect back to that exact port (e.g. 5173)
+  const frontendOrigin = req.query.origin || (req.headers.referer ? new URL(req.headers.referer).origin : 'http://localhost:5173');
+  const statePayload = Buffer.from(JSON.stringify({ origin: frontendOrigin })).toString('base64');
 
   let clientId = '';
   let authUrl = '';
 
   if (provider === 'github') {
     clientId = GITHUB_CLIENT_ID;
-    authUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=user:email`;
+    authUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=user:email&state=${encodeURIComponent(statePayload)}`;
   } else if (provider === 'google') {
     clientId = process.env.GOOGLE_CLIENT_ID;
-    authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=openid%20email%20profile`;
+    authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=openid%20email%20profile&state=${encodeURIComponent(statePayload)}`;
   } else {
     return res.status(400).send("Unsupported OAuth provider");
   }
 
-  // If credentials missing, or if using default developer keys on local/test domains, use Mock Simulator
-  const isDefaultKey = clientId === 'Ov23li0R90HCA9WIdJmD' || 
-                       clientId === '374864384964-0kon4hk28p7h6urapjvf9bq8mj3m42n2.apps.googleusercontent.com' ||
-                       clientId === '151324834505-ps5s6qc0hj55sn166g1lm8gu0qc86cli.apps.googleusercontent.com';
-  const isLocalHost = host.includes('localhost') || host.includes('127.0.0.1') || host.includes('.local') || host.includes('github.dev');
-  const bypassMock = process.env.BYPASS_MOCK_AUTH === 'true';
-
-  if (!clientId || (isDefaultKey && isLocalHost && !bypassMock)) {
-    console.log(`[OAUTH] Client credentials missing or default dev keys on local host for ${provider}. Redirecting to Mock Simulator.`);
-    return res.redirect(`/api/auth/oauth/mock?provider=${provider}&redirect_uri=${encodeURIComponent(redirectUri)}`);
+  if (!clientId) {
+    return res.status(400).send(`OAuth Client ID for ${provider} is not configured in backend/.env`);
   }
 
   res.redirect(authUrl);
@@ -655,25 +681,40 @@ app.get('/api/auth/oauth/:provider/callback', async (req, res) => {
   const provider = req.params.provider.toLowerCase();
   const { code, mock_email, state } = req.query;
 
-  if (!code) {
-    return res.status(400).send("OAuth authorization code missing.");
-  }
+  let frontendOrigin = 'http://localhost:5173';
+  let isAccountLink = false;
+  let linkUserId = null;
 
-  // Handle GitHub Account connection flow if state (JWT token) is present
-  if (provider === 'github' && state && !mock_email) {
-    let userId;
+  if (state) {
+    // Check if state is a JWT token (from GitHub account connect flow)
     try {
       const decoded = jwt.verify(state, SECRET_KEY);
       const userQuery = await db.query('SELECT * FROM users WHERE email = $1', [decoded.sub]);
-      if (userQuery.rows.length === 0) {
-        return res.status(401).send("OAuth authentication failed: user not found.");
+      if (userQuery.rows.length > 0) {
+        linkUserId = userQuery.rows[0].id;
+        isAccountLink = true;
       }
-      userId = userQuery.rows[0].id;
-    } catch (err) {
-      console.error("OAuth callback JWT verification failed:", err);
-      return res.status(401).send("OAuth state verification failed. Session may have expired.");
+    } catch (e) {
+      // Otherwise, parse encoded JSON state payload
+      try {
+        const parsed = JSON.parse(Buffer.from(state, 'base64').toString());
+        if (parsed.origin) frontendOrigin = parsed.origin;
+      } catch (jsonErr) {}
     }
+  }
 
+  if (frontendOrigin === 'http://localhost:5173' && req.headers.referer) {
+    try {
+      frontendOrigin = new URL(req.headers.referer).origin;
+    } catch (e) {}
+  }
+
+  if (!code) {
+    return res.redirect(`${frontendOrigin}/?oauth_error=${encodeURIComponent("OAuth authorization code was not received.")}`);
+  }
+
+  // Handle GitHub Account connection flow if state (JWT token) was verified
+  if (provider === 'github' && isAccountLink && !mock_email) {
     try {
       const tokenResponse = await axios.post(
         'https://github.com/login/oauth/access_token',
@@ -693,7 +734,7 @@ app.get('/api/auth/oauth/:provider/callback', async (req, res) => {
       const accessToken = tokenResponse.data.access_token;
       if (!accessToken) {
         console.error("OAuth access token response:", tokenResponse.data);
-        return res.status(400).send(`Failed to retrieve access token: ${tokenResponse.data.error_description || tokenResponse.data.error || 'Unknown error'}`);
+        return res.redirect(`${frontendOrigin}/?oauth_error=${encodeURIComponent(`Failed to retrieve GitHub access token: ${tokenResponse.data.error_description || tokenResponse.data.error || 'Unknown error'}`)}`);
       }
 
       const userResponse = await axios.get('https://api.github.com/user', {
@@ -705,18 +746,18 @@ app.get('/api/auth/oauth/:provider/callback', async (req, res) => {
 
       const username = userResponse.data.login;
       if (!username) {
-        return res.status(400).send("Failed to retrieve username from GitHub profile.");
+        return res.redirect(`${frontendOrigin}/?oauth_error=${encodeURIComponent("Failed to retrieve username from GitHub profile.")}`);
       }
 
       await db.query(
         'UPDATE users SET github_token = $1, github_username = $2 WHERE id = $3',
-        [accessToken, username, userId]
+        [accessToken, username, linkUserId]
       );
 
-      return res.redirect('/?github_connected=true');
+      return res.redirect(`${frontendOrigin}/?github_connected=true`);
     } catch (err) {
       console.error("GitHub OAuth Callback error:", err.response?.data || err.message);
-      return res.status(500).send(`GitHub authentication error: ${err.message}`);
+      return res.redirect(`${frontendOrigin}/?oauth_error=${encodeURIComponent(`GitHub authentication error: ${err.message}`)}`);
     }
   }
 
@@ -750,12 +791,13 @@ app.get('/api/auth/oauth/:provider/callback', async (req, res) => {
         email = primaryEmailObj ? primaryEmailObj.email.toLowerCase() : userResponse.data.email?.toLowerCase();
         if (!email) email = `${userResponse.data.login}@users.noreply.github.com`.toLowerCase();
       } else if (provider === 'google') {
+        const redirectUri = getOAuthRedirectUri('google', req);
         const tokenResponse = await axios.post('https://oauth2.googleapis.com/token', {
           client_id: process.env.GOOGLE_CLIENT_ID,
           client_secret: process.env.GOOGLE_CLIENT_SECRET,
           code: code,
           grant_type: 'authorization_code',
-          redirect_uri: `${req.protocol}://${req.get('host')}/api/auth/oauth/google/callback`
+          redirect_uri: redirectUri
         });
         const idToken = tokenResponse.data.id_token;
         if (!idToken) throw new Error("ID Token missing from Google response");
@@ -766,19 +808,20 @@ app.get('/api/auth/oauth/:provider/callback', async (req, res) => {
         return res.status(400).send("Unsupported OAuth provider callback");
       }
     } catch (err) {
-      console.error(`OAuth callback error for provider \${provider}:`, err.message);
-      return res.status(500).send(`Authentication error: \${err.message}`);
+      console.error(`OAuth callback error for provider ${provider}:`, err.response?.data || err.message);
+      const desc = err.response?.data?.error_description || err.response?.data?.error || err.message;
+      return res.redirect(`${frontendOrigin}/?oauth_error=${encodeURIComponent(`Authentication failed with ${provider}: ${desc}`)}`);
     }
   }
 
   if (!email) {
-    return res.status(400).send("Could not retrieve email from OAuth profile.");
+    return res.redirect(`${frontendOrigin}/?oauth_error=${encodeURIComponent("Could not retrieve email from OAuth profile.")}`);
   }
 
   // Validate email domain compatibility
   const domainValidation = await validateEmailDomain(email);
   if (!domainValidation.valid) {
-    return res.status(400).send(`OAuth registration denied: \${domainValidation.detail}`);
+    return res.redirect(`${frontendOrigin}/?oauth_error=${encodeURIComponent(`OAuth registration denied: ${domainValidation.detail}`)}`);
   }
 
   try {
@@ -810,8 +853,8 @@ app.get('/api/auth/oauth/:provider/callback', async (req, res) => {
     // Generate JWT token
     const token = jwt.sign({ sub: email }, SECRET_KEY);
 
-    // Redirect back to frontend dashboard with token
-    res.redirect(`/?oauth_token=${token}`);
+    // Redirect back to frontend dashboard with token on the correct frontend origin
+    res.redirect(`${frontendOrigin}/?oauth_token=${token}`);
   } catch (err) {
     console.error("OAuth database resolution error:", err);
     res.status(500).send("Database error during OAuth user resolution.");

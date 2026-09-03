@@ -1,7 +1,21 @@
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 require('dotenv').config();
+
 const { Pool } = require('pg');
 
-const databaseUrl = process.env.DATABASE_URL || 'postgresql://postgres@localhost:5432/ZynkaraShift';
+let databaseUrl = process.env.DATABASE_URL;
+
+if (!databaseUrl) {
+  const user = process.env.POSTGRES_USER || 'postgres';
+  const pass = process.env.POSTGRES_PASSWORD || '250730';
+  const dbName = process.env.POSTGRES_DB || 'VaporupDeploy';
+  databaseUrl = `postgresql://${user}:${pass}@localhost:5432/${dbName}`;
+} else if (databaseUrl.includes('@postgres-control:') && !process.env.TRAEFIK_NETWORK) {
+  // If postgres-control is specified but running on host outside Docker container, use localhost
+  databaseUrl = databaseUrl.replace('@postgres-control:', '@localhost:');
+}
 
 const pool = new Pool({
   connectionString: databaseUrl,

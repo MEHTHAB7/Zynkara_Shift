@@ -307,22 +307,23 @@ export default function App() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const oauthToken = params.get('oauth_token');
+    const oauthError = params.get('oauth_error');
     const upgradeSuccess = params.get('upgrade_success');
     
     if (oauthToken) {
       localStorage.setItem('zynkara_token', oauthToken);
       setToken(oauthToken);
       showToast('Logged in successfully', 'success');
-      
-      // Clean query parameters from URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (oauthError) {
+      showToast(oauthError, 'error');
+      setAuthError(oauthError);
       window.history.replaceState({}, document.title, window.location.pathname);
     } else if (upgradeSuccess) {
       showToast('Upgrade process completed successfully!', 'success');
       if (token) {
         verifyAuthToken(token);
       }
-      
-      // Clean query parameters from URL
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, [token]);
@@ -552,14 +553,17 @@ export default function App() {
       if (parts.length === 2) {
         const domain = parts[1].trim().toLowerCase();
         const whitelistedDomains = [
-          'gmail.com',
-          'github.com', 'users.noreply.github.com'
+          'gmail.com', 'googlemail.com',
+          'github.com', 'users.noreply.github.com',
+          'outlook.com', 'hotmail.com', 'live.com',
+          'yahoo.com', 'icloud.com', 'proton.me', 'protonmail.com',
+          'example.com'
         ];
         const isLocalDomain = domain === 'localhost' || domain === 'zynkara.local' || domain.endsWith('.local') || domain.endsWith('.localhost');
         const isWhitelisted = whitelistedDomains.includes(domain) || whitelistedDomains.some(d => domain.endsWith('.' + d));
 
-        if (!isWhitelisted && !isLocalDomain) {
-          setAuthError("Registration is restricted to real email addresses from Gmail or GitHub.");
+        if (!isWhitelisted && !isLocalDomain && !domain.includes('.')) {
+          setAuthError("Please enter a valid email address domain.");
           return;
         }
       }
@@ -596,7 +600,12 @@ export default function App() {
       } else {
         setVerificationEmail(authEmail);
         setAuthVerificationRequired(true);
-        showToast('Verification code sent! Please verify your email.', 'info');
+        if (data.dev_code) {
+          setVerificationCode(data.dev_code);
+          showToast(`Verification code: ${data.dev_code}`, 'info');
+        } else {
+          showToast('Verification code sent! Please verify your email.', 'info');
+        }
       }
     } catch (err) {
       setAuthError(err.message);
@@ -1089,10 +1098,10 @@ export default function App() {
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
-                  <a href="/api/auth/oauth/github" className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '13px', background: 'rgba(0,0,0,0.15)', borderColor: 'rgba(255,255,255,0.15)', color: '#fff', textDecoration: 'none' }}>
+                  <a href={`/api/auth/oauth/github?origin=${encodeURIComponent(window.location.origin)}`} className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '13px', background: 'rgba(0,0,0,0.15)', borderColor: 'rgba(255,255,255,0.15)', color: '#fff', textDecoration: 'none' }}>
                     <i className="fa-brands fa-github"></i> GitHub
                   </a>
-                  <a href="/api/auth/oauth/google" className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '13px', background: 'rgba(0,0,0,0.15)', borderColor: 'rgba(255,255,255,0.15)', color: '#fff', textDecoration: 'none' }}>
+                  <a href={`/api/auth/oauth/google?origin=${encodeURIComponent(window.location.origin)}`} className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '13px', background: 'rgba(0,0,0,0.15)', borderColor: 'rgba(255,255,255,0.15)', color: '#fff', textDecoration: 'none' }}>
                     <i className="fa-brands fa-google"></i> Google
                   </a>
                 </div>

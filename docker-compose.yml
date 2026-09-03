@@ -15,7 +15,7 @@ services:
     networks:
       - zynkara-traefik-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      test: [ "CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -62,12 +62,25 @@ services:
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
     ports:
-      - "80:80"         # Public HTTP traffic maps to 80
-      - "8080:8080"   # Traefik dashboard
+      - "80:80" # Public HTTP traffic maps to 80
+      - "8080:8080" # Traefik dashboard
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - zynkara-traefik-net
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: zynkara-cloudflared
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN}
+    depends_on:
+      - traefik
+    networks:
+      - zynkara-traefik-net
+    restart: unless-stopped
+
 
 networks:
   zynkara-traefik-net:
